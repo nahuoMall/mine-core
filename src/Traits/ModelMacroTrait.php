@@ -36,7 +36,7 @@ trait ModelMacroTrait
                 return $this;
             }
 
-            $userid = is_null($userid) ? user()->getId() : $userid;
+            $userid = is_null($userid) ? adminUser()->getId() : $userid;
 
             if (empty($userid)) {
                 throw new MineException('Data Scope missing user_id');

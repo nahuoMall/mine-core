@@ -15,7 +15,6 @@ namespace Mine\Kernel\Auth;
 use App\JsonRpc\RpcActionLoginInterface;
 use Mine\MineRequest;
 use function Hyperf\Support\env;
-use function Mine\Helper\container;
 
 class LoginUser
 {
@@ -27,14 +26,19 @@ class LoginUser
     {
         $this->userInfo = $userInfo;
 
+        $this->request = container()->get(MineRequest::class);
+
         $this->getRpcUserInfo();
     }
 
     /**
      * 获取当前登录用户信息.
      */
-    public function getUserInfo(): array
+    public function getUserInfo(string $token = ''): array
     {
+        if (empty($this->userInfo) && ! empty($token)) {
+            $this->getRpcUserInfo($token);
+        }
         return $this->userInfo;
     }
 
@@ -79,11 +83,15 @@ class LoginUser
      * 获取用户信息.
      * @return void
      */
-    private function getRpcUserInfo()
+    private function getRpcUserInfo(string $token = '')
     {
         if (empty($this->userInfo)) {
-            $token = $this->request->getHeaderLine('Authorization');
-            $this->userInfo = container()->get(RpcActionLoginInterface::class)->getLoginInfo($token);
+            try {
+                $token = !empty($token) ? $token : $this->request->getHeaderLine('Authorization');
+                $this->userInfo = container()->get(RpcActionLoginInterface::class)->getLoginInfo(str_replace('Bearer ', '', $token));
+            }catch (\Exception $e){
+                $this->userInfo = [];
+            }
         }
     }
 }
