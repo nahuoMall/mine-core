@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Mine\Kernel\Auth;
 
 use App\JsonRpc\RpcActionLoginInterface;
+use Mine\Exception\TokenException;
 use Mine\MineRequest;
 use function Hyperf\Support\env;
 
@@ -27,8 +28,6 @@ class LoginUser
         $this->userInfo = $userInfo;
 
         $this->request = container()->get(MineRequest::class);
-
-        $this->getRpcUserInfo();
     }
 
     /**
@@ -47,6 +46,9 @@ class LoginUser
      */
     public function getId(): int
     {
+        if (empty($this->userInfo)) {
+            $this->getRpcUserInfo();
+        }
         return $this->userInfo['id'];
     }
 
@@ -55,6 +57,9 @@ class LoginUser
      */
     public function getUsername(): string
     {
+        if (empty($this->userInfo)) {
+            $this->getRpcUserInfo();
+        }
         return $this->userInfo['username'];
     }
 
@@ -89,8 +94,12 @@ class LoginUser
             try {
                 $token = !empty($token) ? $token : $this->request->getHeaderLine('Authorization');
                 $this->userInfo = container()->get(RpcActionLoginInterface::class)->getLoginInfo(str_replace('Bearer ', '', $token));
+
+                if (empty($this->userInfo)) {
+                    throw new TokenException('登录信息失效');
+                }
             }catch (\Exception $e){
-                $this->userInfo = [];
+                throw new TokenException('登录信息失效');
             }
         }
     }
