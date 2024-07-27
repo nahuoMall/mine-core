@@ -12,10 +12,8 @@ declare(strict_types=1);
 
 namespace Mine\Kernel\Auth;
 
-use App\JsonRpc\RpcActionLoginInterface;
-use Mine\Exception\TokenException;
+use Hyperf\Context\Context;
 use Mine\MineRequest;
-use function Hyperf\Support\env;
 
 class LoginUser
 {
@@ -25,8 +23,7 @@ class LoginUser
 
     public function __construct(array $userInfo = [])
     {
-        $this->userInfo = $userInfo;
-
+        $this->userInfo = $userInfo ?: Context::get('admin_user_info', []);
         $this->request = container()->get(MineRequest::class);
     }
 
@@ -35,9 +32,6 @@ class LoginUser
      */
     public function getUserInfo(string $token = ''): array
     {
-        if (empty($this->userInfo) && ! empty($token)) {
-            $this->getRpcUserInfo($token);
-        }
         return $this->userInfo;
     }
 
@@ -46,9 +40,6 @@ class LoginUser
      */
     public function getId(): int
     {
-        if (empty($this->userInfo)) {
-            $this->getRpcUserInfo();
-        }
         return $this->userInfo['id'];
     }
 
@@ -57,9 +48,6 @@ class LoginUser
      */
     public function getUsername(): string
     {
-        if (empty($this->userInfo)) {
-            $this->getRpcUserInfo();
-        }
         return $this->userInfo['username'];
     }
 
@@ -68,42 +56,18 @@ class LoginUser
      */
     public function isSuperAdmin(): bool
     {
-        if (empty($this->userInfo)) {
-            $this->getRpcUserInfo();
-        }
         return (int) $this->userInfo['user_type'] === 100;
     }
 
     /**
      * 验证登录.
      */
-    public function check(string $token = ''): bool
-    {
-        if (empty($token)) {
-            $token = $this->request->getHeaderLine('Authorization');
-        }
-
-        // TODO 去登陆中心查询
-        return container()->get(RpcActionLoginInterface::class)->checkLogin($token);
-    }
-
-    /**
-     * 获取用户信息.
-     * @return void
-     */
-    private function getRpcUserInfo(string $token = '')
+    public function check(): bool
     {
         if (empty($this->userInfo)) {
-            try {
-                $token = !empty($token) ? $token : $this->request->getHeaderLine('Authorization');
-                $this->userInfo = container()->get(RpcActionLoginInterface::class)->getLoginInfo(str_replace('Bearer ', '', $token));
-
-                if (empty($this->userInfo)) {
-                    throw new TokenException('登录信息失效');
-                }
-            }catch (\Exception $e){
-                throw new TokenException('登录信息失效');
-            }
+            return false;
         }
+        return true;
     }
+
 }
