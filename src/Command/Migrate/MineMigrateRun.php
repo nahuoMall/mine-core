@@ -67,17 +67,18 @@ class MineMigrateRun extends BaseCommand
         }
 
         $this->module = trim($this->input->getArgument('name'));
+        $database = $this->input->getOption('database');
 
         // 获取所有租户
         $tenantIds = Tenant::instance()->getAllTenant();
 
-        array_map(function ($tenantId){
+        foreach ($tenantIds as $tenantId) {
             // 初始化租户
-            Tenant::instance()->init($tenantId);
+            Tenant::instance()->init($database ?: $tenantId);
 
-            $this->line('migrate run by tenant_no: ' . $tenantId);
+            $this->line('migrate run by tenant_no: ' . $database ?: $tenantId);
             // 切换数据库
-            $this->prepareDatabase('default_' . $tenantId);
+            $this->prepareDatabase('default_' . $database ?: $tenantId);
 
             // Next, we will check to see if a path option has been defined. If it has
             // we will use the path relative to the root of this installation folder
@@ -95,7 +96,10 @@ class MineMigrateRun extends BaseCommand
                 $this->call('db:seed', ['--force' => true]);
             }
 
-        }, $tenantIds);
+            if (! empty($database)) {
+                break;
+            }
+        }
     }
 
     protected function getOptions(): array
