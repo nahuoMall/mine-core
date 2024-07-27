@@ -78,7 +78,7 @@ class MineMigrateRun extends BaseCommand
 
             $this->line('migrate run by tenant_no: ' . $database ?: $tenantId);
             // 切换数据库
-            $this->prepareDatabase('default_' . $database ?: $tenantId);
+            $this->prepareDatabase($database ?: $tenantId);
 
             // Next, we will check to see if a path option has been defined. If it has
             // we will use the path relative to the root of this installation folder

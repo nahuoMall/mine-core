@@ -39,12 +39,7 @@ class Tenant
 
     public function init($id = null): void
     {
-        if (empty($id)) {
-            $request = $this->container->get(RequestInterface::class);
-            $id = $request->getHeaderLine('X-TENANT-ID');
-        }
-        // 将tenant_no 储存到当前协程上下文中
-        $id && $this->id = $id;
+        $this->id = $id;
     }
 
     /**

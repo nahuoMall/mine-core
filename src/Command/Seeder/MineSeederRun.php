@@ -16,6 +16,7 @@ use Hyperf\Command\Annotation\Command;
 use Hyperf\Command\Concerns\Confirmable;
 use Hyperf\Database\Commands\Seeders\BaseCommand;
 use Hyperf\Database\Seeders\Seed;
+use Mine\Kernel\Tenant\Tenant;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -67,13 +68,28 @@ class MineSeederRun extends BaseCommand
 
         $this->module = ucfirst(trim($this->input->getArgument('name')));
 
-        $this->seed->setOutput($this->output);
+        $database = $this->input->getOption('database');
 
-        if ($this->input->hasOption('database') && $this->input->getOption('database')) {
-            $this->seed->setConnection($this->input->getOption('database'));
+        // 获取所有租户
+        $tenantIds = Tenant::instance()->getAllTenant();
+
+
+        foreach ($tenantIds as $tenantId) {
+            // 初始化租户
+            Tenant::instance()->init($database ?: $tenantId);
+
+            $this->line('seeder run by tenant_no: ' . $database?:$tenantId);
+
+            $this->seed->setOutput($this->output);
+
+            $this->seed->setConnection($database ?: $tenantId);
+
+            $this->seed->run([$this->getSeederPath()]);
+
+            if (!empty($database)) {
+                break;
+            }
         }
-
-        $this->seed->run([$this->getSeederPath()]);
     }
 
     protected function getArguments(): array

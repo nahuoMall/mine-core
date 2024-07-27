@@ -18,6 +18,8 @@ use Hyperf\DbConnection\Db;
 use Mine\Mine;
 use Mine\MineCommand;
 
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use function Hyperf\Support\env;
 use function Hyperf\Support\make;
 
@@ -51,15 +53,15 @@ class InstallProjectCommand extends MineCommand
 
     public function handle(): void
     {
-        $this->installLocalModule();
-        $this->setOthers();
-        $this->finish();
+        $step = $this->installLocalModule();
+        $step && $this->setOthers();
+        $step && $this->finish();
     }
 
     protected function welcome(): void
     {
         $this->line('-----------------------------------------------------------', 'comment');
-        $this->line('Hello, welcome use MineAdmin system.', 'comment');
+        $this->line('Hello, welcome use HeavyAdmin system.', 'comment');
         $this->line('The installation is about to start, just a few steps', 'comment');
         $this->line('-----------------------------------------------------------', 'comment');
     }
@@ -67,108 +69,51 @@ class InstallProjectCommand extends MineCommand
     /**
      * install modules.
      */
-    protected function installLocalModule(): void
+    protected function installLocalModule(): bool
     {
         /* @var Mine $mine */
-        $this->line("Installation of local modules is about to begin...\n", 'comment');
+        $tenantNo = $this->input->getArgument('tenant_no');
+        if (empty( $tenantNo)) {
+            $this->error('tenant number cannot be empty');
+            return false;
+        }
+        $this->line("Installation of Tenant $tenantNo local modules is about to begin...\n", 'comment');
         $mine = make(Mine::class);
         $modules = $mine->getModuleInfo();
+
         foreach ($modules as $name => $info) {
-            $this->call('mine:migrate-run', ['name' => $name, '--force' => 'true']);
+            $this->call('mine:migrate-run', ['name' => $name, '--force' => 'true', '--database' => $tenantNo]);
             if ($name === 'System') {
-                $this->initUserData();
+                // TODO 交由业务系统调用rpc进行处理
+                $this->call('init:systemUser', ['tenant_no' => $tenantNo]);
             }
-            $this->call('mine:seeder-run', ['name' => $name, '--force' => 'true']);
-            $this->line($this->getGreenText(sprintf('"%s" module install successfully', $name)));
+            $this->call('mine:seeder-run', ['name' => $name, '--force' => 'true', '--database' => $tenantNo]);
+            $this->line($this->getGreenText(sprintf('"%s" Tenant ' .$tenantNo. ' module install successfully', $name)));
         }
+
+        return true;
     }
 
     protected function setOthers(): void
     {
         $this->line(PHP_EOL . ' MineAdmin set others items...' . PHP_EOL, 'comment');
         $this->call('mine:update');
-        $this->call('mine:jwt-gen', ['--jwtSecret' => 'JWT_SECRET']);
-        $this->call('mine:jwt-gen', ['--jwtSecret' => 'JWT_API_SECRET']);
 
         if (! file_exists(BASE_PATH . '/config/autoload/mineadmin.php')) {
-            $this->call('vendor:publish', ['package' => 'xmo/mine']);
+            $this->call('vendor:publish', ['package' => 'nahuomall/mine-core']);
         }
-
-        $downloadFrontCode = $this->confirm('Do you downloading the front-end code to "./web" directory?', true);
-
-        // 下载前端代码
-        if ($downloadFrontCode) {
-            $this->line(PHP_EOL . ' Now about to start downloading the front-end code' . PHP_EOL, 'comment');
-            if (\shell_exec('which git')) {
-                \system('git clone https://gitee.com/mineadmin/mineadmin-vue.git ./web/');
-            } else {
-                $this->warn('Your server does not have the `git` command installed and will skip downloading the front-end project');
-            }
-        }
-    }
-
-    protected function initUserData(): void
-    {
-        // 清理数据
-        Db::table('system_user')->truncate();
-        Db::table('system_role')->truncate();
-        Db::table('system_user_role')->truncate();
-        if (Schema::hasTable('system_user_dept')) {
-            Db::table('system_user_dept')->truncate();
-        }
-
-        // 创建超级管理员
-        $superAdminId = Db::table('system_user')->insertGetId([
-            'username' => 'superAdmin',
-            'password' => password_hash('admin123', PASSWORD_DEFAULT),
-            'user_type' => '100',
-            'nickname' => '创始人',
-            'email' => 'admin@adminmine.com',
-            'phone' => '16858888988',
-            'signed' => '广阔天地，大有所为',
-            'dashboard' => 'statistics',
-            'created_by' => 0,
-            'updated_by' => 0,
-            'status' => 1,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
-        // 创建管理员角色
-        $superRoleId = Db::table('system_role')->insertGetId([
-            'name' => '超级管理员（创始人）',
-            'code' => 'superAdmin',
-            'data_scope' => 0,
-            'sort' => 0,
-            'created_by' => env('SUPER_ADMIN', 0),
-            'updated_by' => 0,
-            'status' => 1,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-            'remark' => '系统内置角色，不可删除',
-        ]);
-        Db::table('system_user_role')->insertGetId([
-            'user_id' => $superAdminId,
-            'role_id' => $superRoleId,
-        ]);
-        $envConfig = <<<ENV
-SUPER_ADMIN={$superAdminId}
-ADMIN_ROLE={$superAdminId}
-ENV;
-        file_put_contents(BASE_PATH . '/.env', $envConfig, FILE_APPEND);
     }
 
     protected function finish(): void
     {
-        $i = 5;
         $this->output->write(PHP_EOL . $this->getGreenText('The installation is almost complete'), false);
-        while ($i > 0) {
-            $this->output->write($this->getGreenText('.'), false);
-            --$i;
-            sleep(1);
-        }
-        $this->line(PHP_EOL . sprintf('%s
-MineAdmin Version: %s
-default username: superAdmin
-default password: admin123', $this->getInfo(), Mine::getVersion()), 'comment');
+        $this->line(PHP_EOL . '数据已初始化成功，请执行脚本进行管理员用户初始化');
+    }
+
+    protected function getArguments()
+    {
+        return [
+            ['tenant_no', InputArgument::REQUIRED, 'is the tenant to be run init'],
+        ];
     }
 }

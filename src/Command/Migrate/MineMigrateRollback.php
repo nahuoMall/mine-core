@@ -79,7 +79,7 @@ class MineMigrateRollback extends BaseCommand
 
             $this->line('migrate rollback by tenant_no: ' . $database?:$tenantId);
             // 切换数据库
-            $this->prepareDatabase('default_' . $database?:$tenantId);
+            $this->prepareDatabase($database?:$tenantId);
 
             // Next, we will check to see if a path option has been defined. If it has
             // we will use the path relative to the root of this installation folder
@@ -129,6 +129,7 @@ class MineMigrateRollback extends BaseCommand
     {
         return [
             ['name', InputArgument::REQUIRED, 'Please enter the module to be run'],
+            ['tenant_no', InputArgument::OPTIONAL, 'is the tenant migrations to be run so they can be rolled back individually'],
         ];
     }
 

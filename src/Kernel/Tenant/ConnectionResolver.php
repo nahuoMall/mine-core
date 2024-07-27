@@ -28,10 +28,7 @@ class ConnectionResolver extends \Hyperf\DbConnection\ConnectionResolver
             $name = $this->getDefaultConnection();
         }
 
-        $id = Tenant::instance()->getId();
-        if (! Str::contains($name, '_')) {
-            $name = $name . '_' . $id;
-        }
+        $name = Tenant::instance()->getId();
 
         $connection = null;
         $id = $this->getContextKey($name);
