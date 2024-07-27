@@ -75,6 +75,7 @@ class MineMigrateRun extends BaseCommand
             // 初始化租户
             Tenant::instance()->init($tenantId);
 
+            $this->line('migrate run by tenant_no: ' . $tenantId);
             // 切换数据库
             $this->prepareDatabase('default_' . $tenantId);
 
