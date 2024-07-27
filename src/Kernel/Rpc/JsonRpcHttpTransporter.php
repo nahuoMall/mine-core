@@ -12,16 +12,16 @@ declare(strict_types=1);
 
 namespace Mine\Kernel\Rpc;
 
-use Mine\Kernel\Tenant\Tenant;
+use Hyperf\HttpServer\Contract\RequestInterface;
 use Hyperf\Guzzle\ClientFactory;
 
 class JsonRpcHttpTransporter extends \Hyperf\JsonRpc\JsonRpcHttpTransporter
 {
-
     public function __construct(ClientFactory $clientFactory, array $config = [])
     {
-        // $token = container(RequestInterface::class)->getHeaderLine('Authorization');
-        $config['headers'] = ['Authorization' => $token ?? '', 'TenantId' => Tenant::instance()->getId()];
+        $token = container()->get(RequestInterface::class)->getHeaderLine('Authorization');
+        $tenantId = container()->get(RequestInterface::class)->getHeaderLine('X-Tenant-Id');
+        $config['headers'] = ['Authorization' => $token ?? '', 'TenantId' => $tenantId];
         parent::__construct($clientFactory, $config);
     }
 
