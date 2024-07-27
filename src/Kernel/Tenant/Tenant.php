@@ -26,7 +26,10 @@ class Tenant
      */
     protected $container;
 
-    protected string $id = 'default';
+    protected string $id = '';
+
+    // 管理员id
+    protected int $adminUserId = 0;
 
     public function __construct()
     {
@@ -37,10 +40,26 @@ class Tenant
     {
         if (empty($id)) {
             $request = $this->container->get(RequestInterface::class);
-            $id = $request->header('X-TENANT-ID');
+            $id = $request->getHeaderLine('X-TENANT-ID');
         }
         // 将tenant_no 储存到当前协程上下文中
         $id && $this->id = $id;
+    }
+
+    /**
+     * 设置管理员id.
+     */
+    public function setAdminUserId(int $adminUserId): void
+    {
+        $this->adminUserId = $adminUserId;
+    }
+
+    /**
+     * 获取管理员id.
+     */
+    public function getAdminUserId(): int
+    {
+        return $this->adminUserId;
     }
 
     public function getId(): string
