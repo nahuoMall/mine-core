@@ -16,8 +16,10 @@ use Hyperf\Command\Annotation\Command;
 use Hyperf\Command\Concerns\Confirmable;
 use Hyperf\Database\Commands\Migrations\BaseCommand;
 use Hyperf\Database\Migrations\Migrator;
+use Mine\Kernel\Tenant\Tenant;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
+use function Hyperf\Support\env;
 
 /**
  * Class MineMigrateRun.
@@ -66,23 +68,33 @@ class MineMigrateRun extends BaseCommand
 
         $this->module = trim($this->input->getArgument('name'));
 
-        $this->prepareDatabase();
+        // 获取所有租户
+        $tenantIds = Tenant::instance()->getAllTenant();
 
-        // Next, we will check to see if a path option has been defined. If it has
-        // we will use the path relative to the root of this installation folder
-        // so that migrations may be run for any path within the applications.
-        $this->migrator->setOutput($this->output)
-            ->run($this->getMigrationPaths(), [
-                'pretend' => $this->input->getOption('pretend'),
-                'step' => $this->input->getOption('step'),
-            ]);
+        array_map(function ($tenantId){
+            // 初始化租户
+            Tenant::instance()->init($tenantId);
 
-        // Finally, if the "seed" option has been given, we will re-run the database
-        // seed task to re-populate the database, which is convenient when adding
-        // a migration and a seed at the same time, as it is only this command.
-        if ($this->input->getOption('seed') && ! $this->input->getOption('pretend')) {
-            $this->call('db:seed', ['--force' => true]);
-        }
+            // 切换数据库
+            $this->prepareDatabase('default_' . $tenantId);
+
+            // Next, we will check to see if a path option has been defined. If it has
+            // we will use the path relative to the root of this installation folder
+            // so that migrations may be run for any path within the applications.
+            $this->migrator->setOutput($this->output)
+                ->run($this->getMigrationPaths(), [
+                    'pretend' => $this->input->getOption('pretend'),
+                    'step' => $this->input->getOption('step'),
+                ]);
+
+            // Finally, if the "seed" option has been given, we will re-run the database
+            // seed task to re-populate the database, which is convenient when adding
+            // a migration and a seed at the same time, as it is only this command.
+            if ($this->input->getOption('seed') && ! $this->input->getOption('pretend')) {
+                $this->call('db:seed', ['--force' => true]);
+            }
+
+        }, $tenantIds);
     }
 
     protected function getOptions(): array
@@ -101,13 +113,13 @@ class MineMigrateRun extends BaseCommand
     /**
      * Prepare the migration database for running.
      */
-    protected function prepareDatabase()
+    protected function prepareDatabase(string $tenantId)
     {
-        $this->migrator->setConnection($this->input->getOption('database') ?? 'default');
+        $this->migrator->setConnection($tenantId);
 
         if (! $this->migrator->repositoryExists()) {
             $this->call('migrate:install', array_filter([
-                '--database' => $this->input->getOption('database'),
+                '--database' => $tenantId,
             ]));
         }
     }

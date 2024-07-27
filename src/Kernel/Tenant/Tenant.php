@@ -16,6 +16,7 @@ use Hyperf\Context\ApplicationContext;
 use Hyperf\HttpServer\Contract\RequestInterface;
 use Hyperf\Support\Traits\StaticInstance;
 use Psr\Container\ContainerInterface;
+use function Hyperf\Support\env;
 
 class Tenant
 {
@@ -65,5 +66,16 @@ class Tenant
     public function getId(): string
     {
         return $this->id;
+    }
+
+    /**
+     * 获取所有租户
+     * @return array
+     */
+    public function getAllTenant(): array
+    {
+        $tenantIds = env('DB_TENANT_IDS', '');
+
+        return explode(',', $tenantIds);
     }
 }
