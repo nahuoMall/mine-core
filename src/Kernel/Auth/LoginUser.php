@@ -68,6 +68,9 @@ class LoginUser
      */
     public function isSuperAdmin(): bool
     {
+        if (empty($this->userInfo)) {
+            $this->getRpcUserInfo();
+        }
         return (int) $this->userInfo['user_type'] === 100;
     }
 
