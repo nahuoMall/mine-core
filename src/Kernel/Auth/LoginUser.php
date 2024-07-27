@@ -68,7 +68,7 @@ class LoginUser
      */
     public function isSuperAdmin(): bool
     {
-        return env('SUPER_ADMIN') == $this->getId();
+        return (int) $this->userInfo['user_type'] === 100;
     }
 
     /**
