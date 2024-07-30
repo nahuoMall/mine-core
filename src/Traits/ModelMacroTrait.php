@@ -19,6 +19,7 @@ use Hyperf\Database\Model\Builder;
 use Hyperf\DbConnection\Db;
 use Mine\Exception\MineException;
 
+use Mine\Kernel\Tenant\Tenant;
 use function Hyperf\Config\config;
 use function Hyperf\Support\env;
 
@@ -73,7 +74,9 @@ trait ModelMacroTrait
 
                 public function execute(): Builder
                 {
+                    $oldTenantId = Tenant::instance()->getId();
                     $this->getUserDataScope();
+                    Tenant::instance()->init($oldTenantId);
                     return empty($this->userIds)
                         ? $this->builder
                         : $this->builder->whereIn($this->model->getDataScopeField(), array_unique($this->userIds));
@@ -84,6 +87,7 @@ trait ModelMacroTrait
                  */
                 protected function getUserDataScope(): void
                 {
+                    Tenant::instance()->init('user_center');
                     /**
                      * @phpstan-ignore-next-line
                      */
