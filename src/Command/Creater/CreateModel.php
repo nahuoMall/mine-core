@@ -14,6 +14,7 @@ namespace Mine\Command\Creater;
 
 use Hyperf\Command\Annotation\Command;
 use Hyperf\DbConnection\Db;
+use Mine\Kernel\Tenant\Tenant;
 use Mine\Mine;
 use Mine\MineCommand;
 use Symfony\Component\Console\Input\InputOption;
@@ -62,7 +63,7 @@ class CreateModel extends MineCommand
             $prefix = env('DB_PREFIX');
 
             $tables = Db::select('SHOW TABLES');
-            $key = "Tables_in_{$db}";
+            $key = "Tables_in_{$db}_" . Tenant::instance()->getId();
 
             $tableList = [];
             foreach ($tables as $k) {

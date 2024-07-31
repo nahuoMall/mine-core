@@ -27,7 +27,7 @@ class Tenant
      */
     protected $container;
 
-    protected string $id = '';
+    protected string $id = 'hc';
 
     // 管理员id
     protected int $adminUserId = 0;
