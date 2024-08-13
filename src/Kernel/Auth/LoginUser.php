@@ -46,7 +46,7 @@ class LoginUser
     /**
      * 获取当前登录用户编号.
      */
-    public function getNo(): int
+    public function getNo(): string
     {
         return $this->userInfo['user_no'];
     }
